@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2026-2027 第一学期 · 课程与每日日程</title>
+<style>
+  :root{
+    --bg:#f4f6fb; --card:#ffffff; --ink:#1f2933; --muted:#6b7785;
+    --line:#e3e8ef; --accent:#2f6df0; --accent2:#eef3ff; --danger:#e5484d;
+    --shadow:0 1px 3px rgba(20,40,80,.08),0 4px 16px rgba(20,40,80,.06);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei",Segoe UI,Roboto,sans-serif;
+    font-size:14px;line-height:1.5;padding:18px;max-width:1180px;margin:0 auto}
+  h1{font-size:20px;margin:0 0 2px}
+  h2{font-size:16px;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+  .sub{color:var(--muted);font-size:12.5px;margin:0 0 14px}
+  section{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:16px;margin-bottom:16px;box-shadow:var(--shadow)}
+  /* calendar */
+  .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .cal-head .mon{font-size:17px;font-weight:700}
+  .nav{display:flex;gap:6px}
+  .nav button{border:1px solid var(--line);background:#fff;border-radius:9px;
+    padding:5px 12px;cursor:pointer;font-size:13px;color:var(--ink)}
+  .nav button:hover{background:var(--accent2)}
+  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+  .dow{text-align:center;font-size:12px;color:var(--muted);font-weight:600;padding:4px 0}
+  .cell{min-height:108px;border:1px solid var(--line);border-radius:10px;padding:5px;
+    background:#fff;cursor:pointer;display:flex;flex-direction:column;gap:2px;
+    transition:box-shadow .12s,border-color .12s;overflow:hidden}
+  .cell:hover{border-color:var(--accent)}
+  .cell.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent2)}
+  /* 非本月：明显淡化 + 虚线边框，一眼区分 */
+  .cell.adj{background:#eceff3;border-style:dashed;border-color:#cdd4dd}
+  .cell.adj .dnum{color:#aab2bd}
+  .cell.adj .chip{opacity:.5}
+  .cell.special{border-color:var(--danger);background:#fff7f7}
+  .cell.start{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent2)}
+  .startag{background:var(--accent);color:#fff;border-radius:4px;padding:0 4px;font-size:9px;font-weight:700;margin-left:3px;vertical-align:middle}
+  .dnum{font-size:11.5px;color:var(--muted);font-weight:600}
+  .cell.special .dnum{color:var(--danger)}
+  /* 上午/下午分区：上区=上午，下区=下午，中间虚线分隔 */
+  .zone{flex:1 1 0;min-height:0;display:flex;flex-direction:column;gap:3px}
+  .zone.eve{background:#fbf7f0;border-radius:7px;padding:3px 4px;margin-top:1px}
+  .mid{height:0;border-top:1px dashed #e6eaf0;margin:2px 0}
+  .chip{border-radius:7px;padding:3px 5px;color:#2f2b28;font-size:11px;line-height:1.25;
+    display:flex;flex-direction:column;gap:1px}
+  .chip .top{display:flex;align-items:center;gap:4px}
+  .chip .bdg{background:rgba(0,0,0,.13);border-radius:4px;padding:0 4px;
+    font-size:9.5px;font-weight:700;line-height:1.4;color:#2f2b28}
+  .chip .nm{font-weight:700;font-size:11px}
+  .chip .tc{font-size:9.5px;opacity:.78}
+  .chip .tag{font-size:9px;background:var(--danger);color:#fff;border-radius:4px;padding:0 4px;
+    align-self:flex-start;font-weight:700;margin-top:1px}
+  .chip.task{background:#eef1f6;color:#3a4756;border:1px dashed #c3ccd9}
+  .chip.task .nm{color:#3a4756}
+  .chip.task .bdg{background:#dde3ee;color:#3a4756}
+  /* daily */
+  .daybar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+  .daytitle{font-size:15px;font-weight:700}
+  .daytitle small{color:var(--muted);font-weight:400;margin-left:6px}
+  .addrow{display:flex;gap:6px;flex-wrap:wrap}
+  .addrow input,.addrow textarea{border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:13px;font-family:inherit}
+  .addrow input[type=time]{width:96px}
+  .addrow input[name=t]{flex:1;min-width:140px}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 12px;
+    cursor:pointer;font-size:13px;color:var(--ink)}
+  .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .btn:hover{filter:brightness(.98)}
+  .course-card{display:flex;align-items:center;gap:10px;border:1px solid var(--line);
+    border-radius:10px;padding:8px 10px;margin-bottom:6px}
+  .course-card .dot{width:12px;height:12px;border-radius:4px;flex:0 0 auto}
+  .course-card .bdg{font-size:11px;background:#eef1f6;border-radius:6px;padding:1px 7px;font-weight:700;color:#3a4756}
+  .course-card .nm{font-weight:700}
+  .course-card .tc{color:var(--muted);font-size:12.5px}
+  .task{border:1px solid var(--line);border-radius:10px;padding:8px 10px;display:flex;
+    align-items:flex-start;gap:9px;margin-bottom:6px;background:#fff}
+  .task.done{opacity:.55}
+  .task input[type=checkbox]{margin-top:3px;width:16px;height:16px}
+  .task .body{flex:1;min-width:0}
+  .task .tt{font-weight:600;cursor:text;border-radius:4px;padding:1px 3px}
+  .task .tt:focus{outline:2px solid var(--accent2);background:#fff}
+  .task .nt{font-size:12px;color:var(--muted);cursor:text;border-radius:4px;padding:1px 3px;white-space:pre-wrap}
+  .task .nt:focus{outline:2px solid var(--accent2);background:#fff}
+  .task .tm{font-size:12px;color:var(--accent);font-weight:700;white-space:nowrap}
+  .task .del{border:none;background:none;color:var(--danger);cursor:pointer;font-size:13px}
+  .empty{color:var(--muted);font-size:13px;padding:10px 2px}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+  .filters{display:flex;gap:6px;margin:6px 0 10px}
+  .filters button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 12px;cursor:pointer;font-size:12.5px}
+  .filters button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  details summary{cursor:pointer;font-weight:600;color:var(--accent);list-style:none}
+  details summary::-webkit-details-marker{display:none}
+  details summary::before{content:"▸ "}
+  details[open] summary::before{content:"▾ "}
+  table.det{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px}
+  table.det th,table.det td{border:1px solid var(--line);padding:5px 7px;text-align:left;vertical-align:top}
+  table.det th{background:#f7f9fc;font-weight:700}
+  table.det .c{font-weight:700}
+  .swcell{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:middle}
+  .note{font-size:12px;color:var(--muted);margin-top:8px}
+  /* 响应式：整页随屏幕自适应（手机/平板） */
+  /* 月历使用 1fr 等列，天然铺满宽度、适配任意屏幕，无需横向滚动 */
+  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:clamp(3px,.8vw,6px)}
+  @media (max-width:760px){
+    body{padding:clamp(8px,3vw,14px);font-size:clamp(12px,3.4vw,13.5px)}
+    section{padding:clamp(10px,3.2vw,14px);margin-bottom:12px}
+    h1{font-size:clamp(15px,4.4vw,19px)}
+    h2{font-size:clamp(14px,3.8vw,16px)}
+    .cal-head{flex-direction:column;align-items:stretch;gap:9px}
+    .cal-head .mon{text-align:center;font-size:clamp(15px,4.2vw,17px)}
+    .nav{justify-content:center;flex-wrap:wrap}
+    .nav button{padding:6px 10px;font-size:clamp(12px,3.2vw,13px);flex:1 1 auto}
+    .cell{min-height:clamp(72px,21vw,104px);padding:clamp(3px,.9vw,5px);gap:2px}
+    .cell .chip .tc{display:none}
+    .cell .chip .nm{font-size:clamp(7.5px,2.1vw,9.5px);line-height:1.15}
+    .cell .chip .bdg{font-size:clamp(7px,1.9vw,9px);padding:0 3px}
+    .dow{font-size:clamp(10px,2.8vw,12px);padding:3px 0}
+    .addrow input[name=t]{min-width:100%}
+    .addrow{flex-direction:column}
+    .addrow input,.addrow textarea,.addrow .btn{flex:1 1 auto;width:100%}
+    .daybar{flex-direction:column;align-items:stretch}
+    .daytitle{margin-bottom:6px;font-size:clamp(14px,3.8vw,15px)}
+    .toolbar .btn,.filters button{padding:7px 10px;font-size:clamp(12px,3.2vw,13px)}
+    table.det{font-size:clamp(11px,2.8vw,12.5px)}
+  }
+  @media (max-width:380px){
+    .cell .chip .nm{font-size:7px;line-height:1.1}
+    .cell .dnum{font-size:9.5px}
+    .chip .top{gap:2px}
+    .chip .bdg{font-size:6.5px;padding:0 2px}
+  }
+  @media print{
+    body{background:#fff;padding:0;max-width:none}
+    section{box-shadow:none;break-inside:avoid}
+    .nav,.toolbar,.addrow,.btn,.filters,.task .del{display:none!important}
+    .cell{cursor:default}
+  }
+</style>
+</head>
+<body>
+  <h1>2026–2027 学年第一学期 · 课程与每日日程</h1>
+
+  <section>
+    <div class="cal-head">
+      <div class="mon" id="monLabel">2026年9月</div>
+      <div class="nav">
+        <button id="prevM">‹ 上月</button>
+        <button id="todayM">回到今天</button>
+        <button id="nextM">下月 ›</button>
+      </div>
+    </div>
+    <div class="cal" id="dowRow"></div>
+    <div class="cal" id="calGrid"></div>
+    <p class="note">点击任意日期 → 下方「每日日程」自动切换到那天，可直接添加事务。红色边框日为<b>调休 / 补课</b>日。</p>
+  </section>
+
+  <section>
+    <h2>🗓 每日日程</h2>
+    <div class="daybar">
+      <div class="daytitle" id="dayTitle">—</div>
+      <div class="addrow">
+        <input type="time" id="ntime" value="09:00">
+        <input type="text" id="ntitle" placeholder="事项标题（如：组会、取快递）">
+        <input type="text" id="nnote" placeholder="备注（可选）" style="flex:1;min-width:120px">
+        <button class="btn primary" id="addTask">+ 添加事务</button>
+      </div>
+    </div>
+    <div id="dayCourses"></div>
+    <div id="dayTasks"></div>
+  </section>
+
+  <section>
+    <h2>📋 待办汇总</h2>
+    <div class="filters">
+      <button data-f="all" class="on">全部</button>
+      <button data-f="open">未完成</button>
+      <button data-f="done">已完成</button>
+    </div>
+    <div id="todoList"></div>
+  </section>
+
+  <section>
+    <h2>🛠 数据</h2>
+    <div class="toolbar">
+      <button class="btn" id="btnPrint">🖨 打印 / 存PDF</button>
+      <button class="btn" id="btnExport">⬇ 导出备份</button>
+      <button class="btn" id="btnImport">⬆ 导入备份</button>
+      <button class="btn" id="btnSync">📲 同步链接</button>
+      <button class="btn" id="btnReset">↺ 重置课程表</button>
+      <input type="file" id="fileIn" accept="application/json" style="display:none">
+    </div>
+    <details style="margin-top:10px">
+      <summary>展开：课程时间明细（来自 PDF 第2页）</summary>
+      <div id="detail"></div>
+    </details>
+  </section>
+
+<script>
+/* ===== 课程数据（依据 PDF 第1–2页，已精简）===== */
+/* 颜色：一种课程一种颜色；period 标注上午/下午 */
+const COURSES = [
+  {key:"有机合成", name:"有机合成", color:"#aebfd0", period:"上午", wd:1, segs:[
+    {t:"沈其龙", s:"2026-08-31", e:"2026-09-28"},
+    {t:"桂敬汉", s:"2026-10-12", e:"2026-11-16"}
+  ]},
+  {key:"合成设计", name:"合成设计", color:"#9cc7bf", period:"上午", wd:1, segs:[
+    {t:"桂敬汉", s:"2026-11-23", e:"2027-01-11"}
+  ]},
+  {key:"硕士政治", name:"硕士政治", color:"#b6cda4", period:"下午", wd:1, segs:[
+    {t:"王昊阳、乔博、潘李锋", s:"2026-08-31", e:"2026-12-14"}
+  ]},
+  {key:"物理有机化学", name:"物理有机化学", color:"#e0d2a8", period:"上午", wd:2, segs:[
+    {t:"黎占亭(上)", s:"2026-09-01", e:"2026-10-20"},
+    {t:"薛小松", s:"2026-10-27", e:"2026-11-10"},
+    {t:"郑超", s:"2026-11-17", e:"2026-12-08"},
+    {t:"张文(下)", s:"2026-12-15", e:"2027-01-05"}
+  ]},
+  {key:"金属有机化学", name:"金属有机化学", color:"#e0b3a8", period:"上午", wd:3, segs:[
+    {t:"邓亮", s:"2026-09-02", e:"2026-10-14"},
+    {t:"麻生明、刘国生", s:"2026-10-21", e:"2027-01-20"}
+  ]},
+  {key:"现代有机波谱分析", name:"现代有机波谱分析", color:"#c3b4d8", period:"下午", wd:3, segs:[
+    {t:"王昊阳", s:"2026-09-02", e:"2026-09-30"}
+  ]}
+];
+
+/* 特殊上课日（非每周固定，集中/调休/加课）—— 单独按日期列出 */
+const SPECIAL = [
+  // 现代文献检索（邱婷，集中上课；后两次为调休日）
+  {date:"2026-09-04", period:"下午", key:"现代文献检索", t:"邱婷", tag:""},
+  {date:"2026-09-11", period:"下午", key:"现代文献检索", t:"邱婷", tag:""},
+  {date:"2026-09-18", period:"下午", key:"现代文献检索", t:"邱婷", tag:""},
+  {date:"2026-09-20", period:"下午", key:"现代文献检索", t:"邱婷", tag:"调休·周日"},
+  {date:"2026-10-08", period:"下午", key:"现代文献检索", t:"邱婷", tag:"调休·国庆"},
+  // 现代有机波谱分析 加课/特殊时段（上午）
+  {date:"2026-09-11", period:"上午", key:"现代有机波谱分析", t:"潘李锋", tag:"加课"},
+  {date:"2026-09-18", period:"上午", key:"现代有机波谱分析", t:"潘李锋", tag:"加课"},
+  {date:"2026-09-20", period:"上午", key:"现代有机波谱分析", t:"王昊阳", tag:"加课·周日"},
+  {date:"2026-10-08", period:"上午", key:"现代有机波谱分析", t:"王昊阳", tag:"加课·国庆"},
+  // 大组会（陈组，固定晚上 18:00；逢双周四）
+  {date:"2026-09-03", period:"晚上", key:"大组会", t:"陈组 18:00", tag:""},
+  {date:"2026-09-17", period:"晚上", key:"大组会", t:"陈组 18:00", tag:""},
+  {date:"2026-10-08", period:"晚上", key:"大组会", t:"陈组 18:00", tag:""},
+  {date:"2026-10-22", period:"晚上", key:"大组会", t:"陈组 18:00", tag:""},
+  {date:"2026-11-12", period:"晚上", key:"大组会", t:"陈组 18:00", tag:""},
+  {date:"2026-11-26", period:"晚上", key:"大组会", t:"陈组 18:00", tag:""},
+  {date:"2026-12-10", period:"晚上", key:"大组会", t:"陈组 18:00", tag:""},
+  {date:"2026-12-24", period:"晚上", key:"大组会", t:"陈组 18:00", tag:""},
+  {date:"2027-01-07", period:"晚上", key:"大组会", t:"陈组 18:00", tag:""},
+  {date:"2027-01-21", period:"晚上", key:"大组会", t:"陈组 18:00", tag:""}
+];
+
+/* 课程固定配色（低饱和、同色系高级感；现代文献检索仅集中上课）*/
+const COLOR = {
+  "有机合成":"#aebfd0",
+  "合成设计":"#9cc7bf",
+  "硕士政治":"#b6cda4",
+  "物理有机化学":"#e0d2a8",
+  "金属有机化学":"#e0b3a8",
+  "现代有机波谱分析":"#c3b4d8",
+  "现代文献检索":"#ddb1c2",
+  "大组会":"#b3a0b8"
+};
+
+/* 课程四字缩写（手机月历格子窄，用缩写更紧凑；完整名保留为悬停提示）*/
+const ABBR = {
+  "有机合成":"有机合成",
+  "合成设计":"合成设计",
+  "硕士政治":"硕士政治",
+  "物理有机化学":"物理有机",
+  "金属有机化学":"金属有机",
+  "现代有机波谱分析":"有机波谱",
+  "现代文献检索":"文献检索",
+  "大组会":"大组会"
+};
+
+/* ===== 本地存储 ===== */
+const LS_COURSE="yjs_courses_v3", LS_TASK="yjs_tasks_v3";
+function load(k,def){ try{const v=localStorage.getItem(k);return v?JSON.parse(v):def;}catch(e){return def;} }
+function save(k,v){ localStorage.setItem(k,JSON.stringify(v)); }
+let courses = load(LS_COURSE, COURSES);
+let tasks = load(LS_TASK, []);
+// 清理旧版「导入大组会」按钮残留在待办里的自动条目（id 以 tgm 开头）；
+// 大组会现已作为课程式固定日程显示在日历「晚上」区，不再作为待办。
+(function(){
+  const cleaned = tasks.filter(t=>!(t.id && String(t.id).startsWith("tgm")));
+  if(cleaned.length !== tasks.length){ tasks = cleaned; save(LS_TASK, tasks); }
+})();
+
+/* ===== 工具 ===== */
+function inRange(iso,s,e){ return iso>=s && iso<=e; }
+function ymd(d){ const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0"), day=String(d.getDate()).padStart(2,"0"); return y+"-"+m+"-"+day; }
+function cnWeek(iso){ const w=["周日","周一","周二","周三","周四","周五","周六"][new Date(iso+"T00:00:00").getDay()]; return w; }
+function fmtDate(iso){ const d=new Date(iso+"T00:00:00");
+  return (d.getMonth()+1)+"月"+d.getDate()+"日 "+cnWeek(iso); }
+
+/* 取某天课程（返回带颜色的数组） */
+function coursesOnDate(iso){
+  const wd=new Date(iso+"T00:00:00").getDay();
+  const out=[];
+  courses.forEach(c=>{
+    if(c.wd!==wd) return;
+    const seg=c.segs.find(s=>inRange(iso,s.s,s.e));
+    if(seg) out.push({key:c.key,color:c.color,period:c.period,name:c.name,teacher:seg.t,tag:seg.tag||""});
+  });
+  SPECIAL.forEach(sp=>{
+    if(sp.date===iso) out.push({key:sp.key,color:COLOR[sp.key],period:sp.period,name:sp.key,teacher:sp.t,tag:sp.tag||""});
+  });
+  return out;
+}
+
+/* ===== 渲染：日历 ===== */
+let viewY=2026, viewM=8; // 0-based; 8=9月
+const DOW=["周一","周二","周三","周四","周五","周六","周日"];
+function renderDow(){
+  document.getElementById("dowRow").innerHTML = DOW.map(d=>`<div class="dow">${d}</div>`).join("");
+}
+function chipHtml(c){
+  const abbr = ABBR[c.name]||c.name;
+  const tag = c.tag?`<span class="tag">${c.tag}</span>`:"";
+  return `<div class="chip" style="background:${c.color}" title="${c.name}">
+    <div class="top"><span class="bdg">${c.period}</span><span class="nm">${abbr}</span></div>
+    <span class="tc">${c.teacher}</span>${tag}</div>`;
+}
+function renderCal(){
+  const grid=document.getElementById("calGrid");
+  const first=new Date(viewY,viewM,1);
+  // 以周一为首列
+  let lead=(first.getDay()+6)%7;
+  const start=new Date(viewY,viewM,1-lead);
+  let html="";
+  for(let i=0;i<35;i++){
+    const d=new Date(start); d.setDate(start.getDate()+i);
+    const iso=ymd(d);
+    const inMonth = d.getMonth()===viewM;
+    const wd=d.getDay();
+    const isAdj = !inMonth;
+    const cs=coursesOnDate(iso);
+    const dayTasks=tasks.filter(t=>t.date===iso);
+    const isSel = iso===selDate;
+    const isSpecial = cs.some(c=>c.tag);
+    const isStart = iso==="2026-08-31";
+    let cls="cell"+(isAdj?" adj":"")+(isSel?" sel":"")+(isSpecial?" special":"")+(isStart?" start":"");
+    const morn = cs.filter(c=>c.period==="上午").map(chipHtml).join("");
+    const aft  = cs.filter(c=>c.period==="下午").map(chipHtml).join("");
+    const eve  = cs.filter(c=>c.period==="晚上").map(chipHtml).join("");
+    // 事务计数放在下午区底部（详细在下方每日日程中编辑）
+    const tcount = dayTasks.length?`<div class="chip task"><span class="bdg">事</span><span class="nm">${dayTasks.length} 项事务</span></div>`:"";
+    const eveBlock = eve?`<div class="mid"></div><div class="zone eve">${eve}</div>`:"";
+    html+=`<div class="${cls}" data-iso="${iso}">
+      <div class="dnum">${d.getDate()}${isStart?' <span class="startag">开学</span>':''}</div>
+      <div class="zone am">${morn}</div>
+      <div class="mid"></div>
+      <div class="zone pm">${aft}${tcount}</div>${eveBlock}
+    </div>`;
+  }
+  grid.innerHTML=html;
+  grid.querySelectorAll(".cell").forEach(c=>c.onclick=()=>{ selDate=c.dataset.iso; renderAll(); window.scrollTo({top:document.getElementById("dayTitle").offsetTop-12,behavior:"smooth"}); });
+  document.getElementById("monLabel").textContent = viewY+"年"+(viewM+1)+"月";
+}
+function shiftMonth(d){ viewM+=d; if(viewM<0){viewM=11;viewY--;} if(viewM>11){viewM=0;viewY++;} renderAll(); }
+
+/* ===== 渲染：每日日程 ===== */
+let selDate="2026-08-31";
+function renderDay(){
+  document.getElementById("dayTitle").innerHTML = fmtDate(selDate)+`<small>点击上方日历可切换日期</small>`;
+  const cs=coursesOnDate(selDate);
+  const cc=document.getElementById("dayCourses");
+  if(cs.length){
+    cc.innerHTML = cs.map(c=>{
+      const tag=c.tag?` <span style="color:var(--danger);font-weight:700">(${c.tag})</span>`:"";
+      return `<div class="course-card">
+        <span class="dot" style="background:${c.color}"></span>
+        <span class="bdg">${c.period}</span>
+        <span class="nm">${c.name}</span>${tag}
+        <span class="tc">${c.teacher}</span></div>`;
+    }).join("");
+  } else { cc.innerHTML=`<div class="empty">当天无固定课程（可在下方添加事务）。</div>`; }
+  const list=tasks.filter(t=>t.date===selDate).sort((a,b)=>(a.time||"").localeCompare(b.time||""));
+  const tl=document.getElementById("dayTasks");
+  if(!list.length){ tl.innerHTML=`<div class="empty">尚无事务。</div>`; return; }
+  tl.innerHTML=list.map(t=>taskHTML(t)).join("");
+  bindTaskEvents();
+}
+function taskHTML(t){
+  return `<div class="task ${t.done?"done":""}" data-id="${t.id}">
+    <input type="checkbox" ${t.done?"checked":""} data-act="chk">
+    <div class="body">
+      <div class="tt" contenteditable="true" data-act="title">${esc(t.title)}</div>
+      ${t.note?`<div class="nt" contenteditable="true" data-act="note">${esc(t.note)}</div>`:`<div class="nt" contenteditable="true" data-act="note" style="color:#9aa5b1">备注（可点击填写）</div>`}
+    </div>
+    <span class="tm">${t.time||""}</span>
+    <button class="del" data-act="del">✕</button>
+  </div>`;
+}
+function bindTaskEvents(){
+  document.querySelectorAll("#dayTasks .task").forEach(el=>{
+    const id=el.dataset.id;
+    el.querySelector('[data-act=chk]').onchange=e=>{ const t=tasks.find(x=>x.id===id); t.done=e.target.checked; save(LS_TASK,tasks); renderTodo(); if(t.done) el.classList.add("done"); else el.classList.remove("done"); };
+    el.querySelector('[data-act=title]').onblur=e=>{ const t=tasks.find(x=>x.id===id); t.title=e.target.innerText.trim(); save(LS_TASK,tasks); renderTodo(); };
+    el.querySelector('[data-act=note]').onblur=e=>{ const t=tasks.find(x=>x.id===id); t.note=e.target.innerText.trim(); save(LS_TASK,tasks); };
+    el.querySelector('[data-act=del]').onclick=()=>{ tasks=tasks.filter(x=>x.id!==id); save(LS_TASK,tasks); renderDay(); renderTodo(); renderCal(); };
+  });
+}
+
+/* ===== 渲染：待办汇总 ===== */
+let filter="all";
+function renderTodo(){
+  const el=document.getElementById("todoList");
+  let list=tasks.slice().sort((a,b)=> a.date.localeCompare(b.date)||(a.time||"").localeCompare(b.time||""));
+  if(filter==="open") list=list.filter(t=>!t.done);
+  if(filter==="done") list=list.filter(t=>t.done);
+  if(!list.length){ el.innerHTML=`<div class="empty">暂无待办。</div>`; return; }
+  el.innerHTML=list.map(t=>{
+    const cs=coursesOnDate(t.date);
+    const cour=cs.length?cs.map(c=>`<span style="display:inline-flex;align-items:center;gap:3px"><span style="width:8px;height:8px;border-radius:2px;background:${c.color};display:inline-block"></span>${c.name}</span>`).join("、"):"无课";
+    return `<div class="task ${t.done?"done":""}">
+      <input type="checkbox" ${t.done?"checked":""} data-id="${t.id}">
+      <div class="body">
+        <div class="tt">${esc(t.title)} ${t.done?"✓":""}</div>
+        <div class="nt">${fmtDate(t.date)} · ${t.time||"全天"} · 当天课程：${cour}${t.note? " · "+esc(t.note):""}</div>
+      </div>
+      <button class="del" data-id="${t.id}">✕</button>
+    </div>`;
+  }).join("");
+  el.querySelectorAll('input[type=checkbox]').forEach(c=>c.onchange=()=>{ const t=tasks.find(x=>x.id===c.dataset.id); t.done=c.checked; save(LS_TASK,tasks); renderTodo(); if(t.date===selDate) renderDay(); });
+  el.querySelectorAll('.del').forEach(b=>b.onclick=()=>{ tasks=tasks.filter(x=>x.id!==b.dataset.id); save(LS_TASK,tasks); renderTodo(); if(b.dataset.id && tasks.find(x=>x.id===b.dataset.id)===undefined){} renderDay(); renderCal(); });
+}
+
+/* ===== 课程时间明细（PDF 第2页）===== */
+function renderDetail(){
+  const rows=[
+    ["有机合成","沈其龙","5","周一上午","8.31–9.28","预计2026年12月初考试"],
+    ["有机合成","桂敬汉","6","周一上午","10.12–11.16",""],
+    ["合成设计","桂敬汉","8","周一上午","11.23–27.1.11","待定"],
+    ["硕士政治","王昊阳、乔博、潘李锋","16周","周一下午","8.31–12.14（16周）",""],
+    ["物理有机化学（上）","黎占亭","7","周二上午","9.1–10.20","预计2026年12月中旬考试"],
+    ["物理有机化学（上）","薛小松","3","周二上午","10.27–11.10",""],
+    ["物理有机化学（上）","郑超","4","周二上午","11.17–12.8",""],
+    ["物理有机化学（下）","张文","4","周二上午","12.15–27.1.5","预计下学期考试"],
+    ["金属有机化学","邓亮","6","周三上午","9.2–10.14","第一学期课程结束"],
+    ["金属有机化学","麻生明、刘国生","14","周三上午","10.21–27.1.20","第二学期文献汇报，预计3月中旬考试"],
+    ["现代有机波谱分析","王昊阳","7","周三下午","9.2–9.30、9.20上午、10.8上午","预计2027年1月中下旬考试"],
+    ["现代有机波谱分析","乔博","11","周三下午","10.14–12.23",""],
+    ["现代有机波谱分析","潘李锋","2","周三下午(实为上午)","9.11上午、9.18上午",""],
+    ["现代文献检索","邱婷","5","集中上课(周五下午)","9.4、9.11、9.18、9.20(周日)、10.8(国庆调休) 下午",""]
+  ];
+  let html=`<table class="det"><tr><th>课程</th><th>教师</th><th>次数</th><th>时间</th><th>授课日期</th><th>备注/考试</th></tr>`;
+  rows.forEach(r=>{ html+=`<tr><td class="c"><span class="swcell" style="background:${COLOR[r[0]]||'#999'}"></span>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td><td>${r[5]}</td></tr>`; });
+  html+=`</table><p class="note">说明：① 周四专硕课（有机合成精细化工基础、应用物理有机化学）、硕士英语（已免修）、周五/周六基础实验 均未列入本表。② 国庆假期 10/1–10/7，10/5（周一） likely 停课，硕士政治按连续16周显示至 12.14。③ 9/20 为周日、10/8 为国庆调休周四，这两天有补课，日历中以红框标注。④ <b>大组会（陈组）</b>逢 9/3、9/17、10/8、10/22、11/12、11/26、12/10、12/24、2027/1/7、2027/1/21 的<b>晚上 18:00</b>，已作为固定日程直接显示在日历的「晚上」区，颜色为柔雾紫灰（#b3a0b8）。</p>`;
+  document.getElementById("detail").innerHTML=html;
+}
+
+/* ===== 通用 ===== */
+function esc(s){ return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+function renderAll(){ renderCal(); renderDay(); renderTodo(); }
+
+/* 初始化视图到当前月份（联网版：打开即显示当下月份） */
+const _t0=new Date();
+viewY=_t0.getFullYear(); viewM=_t0.getMonth(); selDate=ymd(_t0);
+
+/* 事件绑定 */
+document.getElementById("prevM").onclick=()=>shiftMonth(-1);
+document.getElementById("nextM").onclick=()=>shiftMonth(1);
+document.getElementById("todayM").onclick=()=>{
+  const t=new Date();
+  const ty=t.getFullYear(), tm=t.getMonth(), td=t.getDate();
+  const iso=`${ty}-${String(tm+1).padStart(2,"0")}-${String(td).padStart(2,"0")}`;
+  viewY=ty; viewM=tm; selDate=iso; renderAll();
+};
+document.getElementById("addTask").onclick=addTask;
+function addTask(){
+  const title=document.getElementById("ntitle").value.trim();
+  if(!title){ alert("请填写事项标题"); return; }
+  tasks.push({id:"t"+Date.now(), date:selDate, time:document.getElementById("ntime").value,
+    title, note:document.getElementById("nnote").value.trim(), done:false});
+  save(LS_TASK,tasks);
+  document.getElementById("ntitle").value=""; document.getElementById("nnote").value="";
+  renderDay(); renderTodo(); renderCal();
+}
+document.querySelectorAll(".filters button").forEach(b=>b.onclick=()=>{
+  filter=b.dataset.f; document.querySelectorAll(".filters button").forEach(x=>x.classList.remove("on"));
+  b.classList.add("on"); renderTodo();
+});
+document.getElementById("btnPrint").onclick=()=>window.print();
+document.getElementById("btnExport").onclick=()=>{
+  const data={courses,tasks}; const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="日程备份_"+ymd(new Date())+".json"; a.click();
+};
+document.getElementById("btnImport").onclick=()=>document.getElementById("fileIn").click();
+document.getElementById("fileIn").onchange=e=>{
+  const f=e.target.files[0]; if(!f) return; const r=new FileReader();
+  r.onload=()=>{ try{ const d=JSON.parse(r.result); if(d.courses)courses=d.courses; if(d.tasks)tasks=d.tasks;
+    save(LS_COURSE,courses); save(LS_TASK,tasks); renderAll(); renderDetail(); alert("导入成功"); }
+    catch(err){ alert("导入失败：文件格式错误"); } };
+  r.readAsText(f);
+};
+document.getElementById("btnReset").onclick=()=>{
+  if(!confirm("确定要重置课程表为默认（PDF原始数据）吗？你添加的事务不会受影响。")) return;
+  courses=COURSES; save(LS_COURSE,courses); renderAll(); renderDetail();
+};
+
+/* ===== 跨设备同步链接（无需后端；将事务编码进 URL hash）===== */
+document.getElementById("btnSync").onclick=()=>{
+  const payload=btoa(unescape(encodeURIComponent(JSON.stringify({tasks}))));
+  const url=location.href.split("#")[0]+"#data="+payload;
+  const ta=document.createElement("textarea"); ta.value=url; ta.style.position="fixed"; ta.style.opacity="0";
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  try{ document.execCommand("copy"); }catch(e){}
+  if(navigator.clipboard){ navigator.clipboard.writeText(url).catch(()=>{}); }
+  ta.remove();
+  alert("同步链接已复制到剪贴板！\n\n把它发到另一台设备（手机/电脑），用浏览器打开即可同步你当前的所有「每日事务」。\n\n说明：课程已内置在页面中，无需同步；此链接仅同步你手动添加的事务。切换设备后若改了事务，可再次点「📲 同步链接」生成新链接覆盖。");
+};
+function tryLoadFromHash(){
+  const m=location.hash.match(/data=([^&]+)/);
+  if(!m) return;
+  try{
+    const json=decodeURIComponent(escape(atob(m[1])));
+    const d=JSON.parse(json);
+    if(d && Array.isArray(d.tasks)){
+      if(confirm("检测到同步链接中包含 "+d.tasks.length+" 条事务，是否覆盖当前设备上的本地事务？\n（取消则保留本地事务）")){
+        tasks=d.tasks; save(LS_TASK,tasks);
+      }
+    }
+  }catch(e){ /* 忽略无效链接 */ }
+  history.replaceState(null,"",location.pathname+location.search);
+}
+
+/* 启动 */
+tryLoadFromHash();
+renderDow(); renderDetail(); renderAll();
+</script>
+</body>
+</html>
