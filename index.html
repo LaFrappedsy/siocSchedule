@@ -197,8 +197,9 @@
       <button class="btn" id="btnPrint">🖨 打印 / 存PDF</button>
       <button class="btn" id="btnExport">⬇ 导出备份</button>
       <button class="btn" id="btnImport">⬆ 导入备份</button>
+      <button class="btn primary" id="btnAuto">🔄 自动同步：开</button>
       <button class="btn" id="btnPull">📥 从云端拉取</button>
-      <button class="btn primary" id="btnSync">☁️ 同步到云端</button>
+      <button class="btn" id="btnSync">☁️ 同步到云端</button>
       <button class="btn" id="btnReset">↺ 重置课程表</button>
       <input type="file" id="fileIn" accept="application/json" style="display:none">
     </div>
@@ -289,8 +290,12 @@ const ABBR = {
 
 /* ===== 本地存储 ===== */
 const LS_COURSE="yjs_courses_v3", LS_TASK="yjs_tasks_v3";
+let _suppressPush=false;       // 拉取/合并期间抑制自动上传，避免循环
+let _pushTimer=null;           // 自动上传防抖计时器
+let _pollTimer=null;           // 轮询拉取计时器
+let autoSync=(localStorage.getItem("yjs_auto_sync")||"on")==="on"; // 自动同步总开关（默认开）
 function load(k,def){ try{const v=localStorage.getItem(k);return v?JSON.parse(v):def;}catch(e){return def;} }
-function save(k,v){ localStorage.setItem(k,JSON.stringify(v)); }
+function save(k,v){ localStorage.setItem(k,JSON.stringify(v)); if(k===LS_TASK && !_suppressPush) scheduleAutoPush(); }
 /* ===== 云端同步（GitHub 仓库文件）=====
    说明：token 由用户在本机输入并保存在 localStorage，不会写入仓库（GitHub 会拦截含密钥的提交）。
    生成方式：GitHub→Settings→Developer settings→Personal access tokens→Tokens(classic)，勾选 public_repo。 */
@@ -303,7 +308,7 @@ let tasks = load(LS_TASK, []);
 // 大组会现已作为课程式固定日程显示在日历「晚上」区，不再作为待办。
 (function(){
   const cleaned = tasks.filter(t=>!(t.id && String(t.id).startsWith("tgm")));
-  if(cleaned.length !== tasks.length){ tasks = cleaned; save(LS_TASK, tasks); }
+  if(cleaned.length !== tasks.length){ tasks = cleaned; _suppressPush=true; try{ save(LS_TASK, tasks); }finally{ _suppressPush=false; } }
 })();
 
 /* ===== 工具 ===== */
@@ -582,7 +587,7 @@ async function doSync(){
   const old=btn.textContent; btn.textContent="同步中…"; btn.disabled=true;
   try{
     const cloud=await cloudPull();
-    if(cloud){ tasks=mergeTasks(tasks,cloud); save(LS_TASK,tasks); }
+    if(cloud){ _suppressPush=true; try{ tasks=mergeTasks(tasks,cloud); save(LS_TASK,tasks); }finally{ _suppressPush=false; } }
     const ok=await cloudPush(tasks);
     renderAll();
     if(ok) alert("☁️ 已同步到云端！其他设备打开页面、或切回前台/解锁时会自动拉取最新（也可点「📥 从云端拉取」）。");
@@ -595,22 +600,62 @@ async function doPull(){
   const old=btn.textContent; btn.textContent="拉取中…"; btn.disabled=true;
   try{
     const cloud=await cloudPull();
-    if(cloud){ tasks=mergeTasks(tasks,cloud); save(LS_TASK,tasks); renderAll(); alert("📥 已从云端拉取最新事务。"); }
+    if(cloud){ _suppressPush=true; try{ tasks=mergeTasks(tasks,cloud); save(LS_TASK,tasks); }finally{ _suppressPush=false; } renderAll(); alert("📥 已从云端拉取最新事务。"); }
     else alert("暂无云端数据或拉取失败（可能网络问题）。");
   }catch(e){ alert("⚠️ 拉取出错："+e.message); }
   finally{ btn.textContent=old; btn.disabled=false; }
 }
+/* ===== 自动同步：改动即推 + 定时轮询拉取 ===== */
+async function autoPush(){
+  if(!GH_TOKEN || !autoSync) return;          // 无 token 或未开启则静默跳过
+  _suppressPush=true;
+  try{
+    const cloud=await cloudPull();
+    if(cloud){ tasks=mergeTasks(tasks,cloud); save(LS_TASK,tasks); }
+    await cloudPush(tasks);
+  }catch(e){ /* 静默失败，等下次重试 */ }
+  finally{ _suppressPush=false; }
+}
+function scheduleAutoPush(){                   // 本地事务变更后防抖 3 秒自动上传
+  if(!autoSync) return;
+  if(_pushTimer) clearTimeout(_pushTimer);
+  _pushTimer=setTimeout(autoPush, 3000);
+}
+async function pollOnce(){                     // 每 60 秒静默拉取云端（无需 token）
+  if(!autoSync) return;
+  const cloud=await cloudPull();
+  if(cloud){
+    _suppressPush=true;
+    try{ tasks=mergeTasks(tasks,cloud); save(LS_TASK,tasks); }
+    finally{ _suppressPush=false; }
+    renderAll();
+  }
+}
+function startPoll(){ if(_pollTimer) return; _pollTimer=setInterval(pollOnce, 60000); }
+function stopPoll(){ if(_pollTimer){ clearInterval(_pollTimer); _pollTimer=null; } }
+function setAutoSync(on){
+  autoSync=!!on;
+  localStorage.setItem("yjs_auto_sync", autoSync?"on":"off");
+  const b=document.getElementById("btnAuto");
+  if(b){ b.textContent=autoSync?"🔄 自动同步：开":"🔄 自动同步：关"; b.classList.toggle("primary",autoSync); }
+  if(autoSync) startPoll(); else stopPoll();
+}
+document.getElementById("btnAuto").onclick=()=>setAutoSync(!autoSync);
 document.getElementById("btnSync").onclick=doSync;
 document.getElementById("btnPull").onclick=doPull;
 
 /* 启动 */
 tryLoadFromHash();
 (async()=>{
-  const cloud=await cloudPull();
-  if(cloud){ tasks=mergeTasks(tasks,cloud); save(LS_TASK,tasks); }
+  _suppressPush=true;
+  try{
+    const cloud=await cloudPull();
+    if(cloud){ tasks=mergeTasks(tasks,cloud); save(LS_TASK,tasks); }
+  } finally{ _suppressPush=false; }
   renderDow(); renderDetail(); renderAll();
+  setAutoSync(autoSync); // 初始化按钮状态并启动 60 秒轮询拉取
 })();
-/* 切回前台/解锁时自动从云端拉取最新（无需手动刷新页面）*/
+/* 切回前台/解锁时立即拉取一次（叠加在轮询之上，体验更即时）*/
 document.addEventListener("visibilitychange", ()=>{
   if(document.hidden) return;
   cloudPull().then(cloud=>{ if(cloud){ tasks=mergeTasks(tasks,cloud); save(LS_TASK,tasks); renderAll(); } });
