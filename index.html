@@ -585,7 +585,7 @@ async function doSync(){
     if(cloud){ tasks=mergeTasks(tasks,cloud); save(LS_TASK,tasks); }
     const ok=await cloudPush(tasks);
     renderAll();
-    if(ok) alert("☁️ 已同步到云端！其他设备打开或刷新本页面即可看到最新事务。");
+    if(ok) alert("☁️ 已同步到云端！其他设备打开页面、或切回前台/解锁时会自动拉取最新（也可点「📥 从云端拉取」）。");
     else alert("⚠️ 上传失败：可能 token 已过期或网络异常。本地数据已保留，稍后可重试。");
   }catch(e){ alert("⚠️ 同步出错："+e.message); }
   finally{ btn.textContent=old; btn.disabled=false; }
@@ -610,6 +610,11 @@ tryLoadFromHash();
   if(cloud){ tasks=mergeTasks(tasks,cloud); save(LS_TASK,tasks); }
   renderDow(); renderDetail(); renderAll();
 })();
+/* 切回前台/解锁时自动从云端拉取最新（无需手动刷新页面）*/
+document.addEventListener("visibilitychange", ()=>{
+  if(document.hidden) return;
+  cloudPull().then(cloud=>{ if(cloud){ tasks=mergeTasks(tasks,cloud); save(LS_TASK,tasks); renderAll(); } });
+});
 </script>
 </body>
 </html>
