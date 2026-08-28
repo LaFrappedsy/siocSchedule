@@ -114,10 +114,17 @@
     .cal-head .mon{text-align:center;font-size:clamp(15px,4.2vw,17px)}
     .nav{justify-content:center;flex-wrap:wrap}
     .nav button{padding:6px 10px;font-size:clamp(12px,3.2vw,13px);flex:1 1 auto}
-    .cell{min-height:clamp(72px,21vw,104px);padding:clamp(3px,.9vw,5px);gap:2px}
+    /* 手机端：chip 改为单行横排，课程名完整显示，溢出才省略 */
+    .cell{display:flex;flex-direction:column;gap:2px;
+      min-height:clamp(56px,16vw,80px);padding:2px 3px}
+    .cell .chip{flex-direction:row;align-items:center;gap:3px;padding:1.5px 3px;line-height:1.2}
+    .cell .chip .top{display:contents}
+    .cell .chip .bdg{font-size:clamp(7px,1.9vw,8.5px);padding:0 3px;flex:0 0 auto;
+      line-height:1.4;background:rgba(0,0,0,.13);border-radius:3px;min-width:0}
+    .cell .chip .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+      font-size:clamp(8.5px,2.3vw,10px);font-weight:700}
     .cell .chip .tc{display:none}
-    .cell .chip .nm{font-size:clamp(7.5px,2.1vw,9.5px);line-height:1.15}
-    .cell .chip .bdg{font-size:clamp(7px,1.9vw,9px);padding:0 3px}
+    .cell .chip .tag{display:none}
     .dow{font-size:clamp(10px,2.8vw,12px);padding:3px 0}
     .addrow input[name=t]{min-width:100%}
     .addrow{flex-direction:column}
@@ -128,10 +135,11 @@
     table.det{font-size:clamp(11px,2.8vw,12.5px)}
   }
   @media (max-width:380px){
-    .cell .chip .nm{font-size:7px;line-height:1.1}
+    .cell{min-height:clamp(48px,14vw,66px);padding:2px;gap:1.5px}
+    .cell .chip{padding:1.5px 2.5px;gap:2px}
+    .cell .chip .nm{font-size:8px}
+    .cell .chip .bdg{font-size:6.5px;padding:0 2px}
     .cell .dnum{font-size:9.5px}
-    .chip .top{gap:2px}
-    .chip .bdg{font-size:6.5px;padding:0 2px}
   }
   @media print{
     body{background:#fff;padding:0;max-width:none}
@@ -320,10 +328,15 @@ function renderDow(){
   document.getElementById("dowRow").innerHTML = DOW.map(d=>`<div class="dow">${d}</div>`).join("");
 }
 function chipHtml(c){
+  // 短时段标：上午/下午/晚上 → 上/下/晚（手机端省空间，电脑端自动忽略）
+  const pShort = {上午:"上",下午:"下",晚上:"晚"};
+  const ps = pShort[c.period] || c.period;
   const abbr = ABBR[c.name]||c.name;
+  // 完整名（鼠标悬停/手机长按显示含教师信息）
+  const full = c.teacher ? `${c.name} · ${c.teacher}` : c.name;
   const tag = c.tag?`<span class="tag">${c.tag}</span>`:"";
-  return `<div class="chip" style="background:${c.color}" title="${c.name}">
-    <div class="top"><span class="bdg">${c.period}</span><span class="nm">${abbr}</span></div>
+  return `<div class="chip" style="background:${c.color}" title="${full}">
+    <div class="top"><span class="bdg">${ps}</span><span class="nm">${c.name}</span></div>
     <span class="tc">${c.teacher}</span>${tag}</div>`;
 }
 function renderCal(){
