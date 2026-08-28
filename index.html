@@ -436,9 +436,9 @@ function taskHTML(t){
 function bindTaskEvents(){
   document.querySelectorAll("#dayTasks .task").forEach(el=>{
     const id=el.dataset.id;
-    el.querySelector('[data-act=chk]').onchange=e=>{ const t=tasks.find(x=>x.id===id); t.done=e.target.checked; save(LS_TASK,tasks); renderTodo(); if(t.done) el.classList.add("done"); else el.classList.remove("done"); };
-    el.querySelector('[data-act=title]').onblur=e=>{ const t=tasks.find(x=>x.id===id); t.title=e.target.innerText.trim(); save(LS_TASK,tasks); renderTodo(); };
-    el.querySelector('[data-act=note]').onblur=e=>{ const t=tasks.find(x=>x.id===id); t.note=e.target.innerText.trim(); save(LS_TASK,tasks); };
+    el.querySelector('[data-act=chk]').onchange=e=>{ const t=tasks.find(x=>x.id===id); t.done=e.target.checked; t.ut=Date.now(); save(LS_TASK,tasks); renderTodo(); if(t.done) el.classList.add("done"); else el.classList.remove("done"); };
+    el.querySelector('[data-act=title]').onblur=e=>{ const t=tasks.find(x=>x.id===id); t.title=e.target.innerText.trim(); t.ut=Date.now(); save(LS_TASK,tasks); renderTodo(); };
+    el.querySelector('[data-act=note]').onblur=e=>{ const t=tasks.find(x=>x.id===id); t.note=e.target.innerText.trim(); t.ut=Date.now(); save(LS_TASK,tasks); };
     el.querySelector('[data-act=del]').onclick=()=>{ const t=tasks.find(x=>x.id===id); if(t){ t.del=true; t.ut=Date.now(); } save(LS_TASK,tasks); renderDay(); renderTodo(); renderCal(); };
   });
 }
@@ -463,7 +463,7 @@ function renderTodo(){
       <button class="del" data-id="${t.id}">✕</button>
     </div>`;
   }).join("");
-  el.querySelectorAll('input[type=checkbox]').forEach(c=>c.onchange=()=>{ const t=tasks.find(x=>x.id===c.dataset.id); t.done=c.checked; save(LS_TASK,tasks); renderTodo(); if(t.date===selDate) renderDay(); });
+  el.querySelectorAll('input[type=checkbox]').forEach(c=>c.onchange=()=>{ const t=tasks.find(x=>x.id===c.dataset.id); t.done=c.checked; t.ut=Date.now(); save(LS_TASK,tasks); renderTodo(); if(t.date===selDate) renderDay(); });
   el.querySelectorAll('.del').forEach(b=>b.onclick=()=>{ const t=tasks.find(x=>x.id===b.dataset.id); if(t){ t.del=true; t.ut=Date.now(); } save(LS_TASK,tasks); renderTodo(); renderDay(); renderCal(); });
 }
 
@@ -556,28 +556,38 @@ function tryLoadFromHash(){
   history.replaceState(null,"",location.pathname+location.search);
 }
 async function cloudPull(){
+  // 关键修复：拉取改走 api.github.com（实时返回，不受 raw CDN 缓存约 10 分钟滞后影响）
   try{
-    const r=await fetch(GH_RAW,{cache:"no-store"});
+    const r=await fetch(GH_API,{headers:{Accept:"application/vnd.github+json"},cache:"no-store"});
     if(!r.ok) return null;
     const data=await r.json();
-    return Array.isArray(data.tasks)?data.tasks:null;
+    if(!data.content) return null;
+    const bin=atob((data.content||"").replace(/\s/g,""));
+    const bytes=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+    const obj=JSON.parse(new TextDecoder().decode(bytes));
+    return Array.isArray(obj.tasks)?obj.tasks:null;
   }catch(e){ return null; }
 }
 async function cloudPush(list){
-  let sha=null;
-  try{
-    const head=await fetch(GH_API,{headers:{Authorization:"Bearer "+GH_TOKEN,Accept:"application/vnd.github+json"}});
-    if(head.ok) sha=(await head.json()).sha;
-  }catch(e){}
   const content=btoa(unescape(encodeURIComponent(JSON.stringify({tasks:list,updated:Date.now()}))));
-  const body={message:"sync tasks via web",content};
-  if(sha) body.sha=sha;
-  try{
-    const r=await fetch(GH_API,{method:"PUT",
-      headers:{Authorization:"Bearer "+GH_TOKEN,Accept:"application/vnd.github+json","Content-Type":"application/json"},
-      body:JSON.stringify(body)});
-    return r.ok;
-  }catch(e){ return false; }
+  for(let attempt=0; attempt<2; attempt++){
+    let sha=null;
+    try{
+      const head=await fetch(GH_API,{headers:{Authorization:"Bearer "+GH_TOKEN,Accept:"application/vnd.github+json"}});
+      if(head.ok) sha=(await head.json()).sha;
+    }catch(e){}
+    const body={message:"sync tasks via web",content};
+    if(sha) body.sha=sha;
+    try{
+      const r=await fetch(GH_API,{method:"PUT",
+        headers:{Authorization:"Bearer "+GH_TOKEN,Accept:"application/vnd.github+json","Content-Type":"application/json"},
+        body:JSON.stringify(body)});
+      if(r.ok) return true;
+      if(r.status!==409) return false; // 非「版本冲突」错误直接失败
+    }catch(e){ return false; }
+  }
+  return false;
 }
 function mergeTasks(local,cloud){
   const map=new Map();
@@ -663,7 +673,7 @@ document.getElementById("btnSync").onclick=doSync;
 document.getElementById("btnPull").onclick=doPull;
 
 /* ===== 同步状态显示 ===== */
-const APP_VER="2026-08-28c";
+const APP_VER="2026-08-28d";
 let _lastSync=0;
 function fmtSync(ts){
   if(!ts) return "尚未同步";
