@@ -90,6 +90,9 @@
   .empty{color:var(--muted);font-size:13px;padding:10px 2px}
   .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px}
   .hint{font-size:12.5px;border-radius:8px;padding:8px 10px;margin-bottom:10px;background:#fff4e5;border:1px solid #ffd9a0;color:#9a5b00;line-height:1.5}
+  .syncstatus{font-size:12px;margin-top:8px;padding:6px 10px;border-radius:8px;line-height:1.4}
+  .syncstatus.ok{background:#eafaf0;border:1px solid #bfe6cd;color:#1d7a3e}
+  .syncstatus.warn{background:#fff4e5;border:1px solid #ffd9a0;color:#9a5b00}
   .filters{display:flex;gap:6px;margin:6px 0 10px}
   .filters button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 12px;cursor:pointer;font-size:12.5px}
   .filters button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
@@ -195,6 +198,7 @@
   <section>
     <h2>🛠 数据</h2>
     <div id="syncHint" class="hint" style="display:none"></div>
+    <div id="syncStatus" class="syncstatus ok">同步状态加载中…</div>
     <div class="toolbar">
       <button class="btn" id="btnPrint">🖨 打印 / 存PDF</button>
       <button class="btn" id="btnExport">⬇ 导出备份</button>
@@ -297,7 +301,12 @@ let _pushTimer=null;           // 自动上传防抖计时器
 let _pollTimer=null;           // 轮询拉取计时器
 let autoSync=(localStorage.getItem("yjs_auto_sync")||"on")==="on"; // 自动同步总开关（默认开）
 function load(k,def){ try{const v=localStorage.getItem(k);return v?JSON.parse(v):def;}catch(e){return def;} }
-function save(k,v){ localStorage.setItem(k,JSON.stringify(v)); if(k===LS_TASK && !_suppressPush) scheduleAutoPush(); }
+function save(k,v){ localStorage.setItem(k,JSON.stringify(v));
+  if(k===LS_TASK){
+    if(!GH_TOKEN) showSyncHint("⚠ 本设备尚未授权：你新增/修改/删除的日程不会同步到其他设备。点「☁️ 同步到云端」粘贴 token 即可开启自动上传。");
+    if(!_suppressPush) scheduleAutoPush();
+  }
+}
 /* ===== 云端同步（GitHub 仓库文件）=====
    说明：token 由用户在本机输入并保存在 localStorage，不会写入仓库（GitHub 会拦截含密钥的提交）。
    生成方式：GitHub→Settings→Developer settings→Personal access tokens→Tokens(classic)，勾选 public_repo。 */
@@ -591,8 +600,8 @@ async function doSync(){
     const cloud=await cloudPull();
     if(cloud){ _suppressPush=true; try{ tasks=mergeTasks(tasks,cloud); save(LS_TASK,tasks); }finally{ _suppressPush=false; } }
     const ok=await cloudPush(tasks);
-    renderAll();
-    if(ok) alert("☁️ 已同步到云端！其他设备打开页面、或切回前台/解锁时会自动拉取最新（也可点「📥 从云端拉取」）。");
+    renderAll(); updateSyncStatus();
+    if(ok){ touchSync(); alert("☁️ 已同步到云端！其他设备打开页面、或切回前台/解锁时会自动拉取最新（也可点「📥 从云端拉取」）。"); }
     else alert("⚠️ 上传失败：可能 token 已过期或网络异常。本地数据已保留，稍后可重试。");
   }catch(e){ alert("⚠️ 同步出错："+e.message); }
   finally{ btn.textContent=old; btn.disabled=false; }
@@ -602,7 +611,7 @@ async function doPull(){
   const old=btn.textContent; btn.textContent="拉取中…"; btn.disabled=true;
   try{
     const cloud=await cloudPull();
-    if(cloud){ _suppressPush=true; try{ tasks=mergeTasks(tasks,cloud); save(LS_TASK,tasks); }finally{ _suppressPush=false; } renderAll(); alert("📥 已从云端拉取最新事务。"); }
+    if(cloud){ _suppressPush=true; try{ tasks=mergeTasks(tasks,cloud); save(LS_TASK,tasks); }finally{ _suppressPush=false; } renderAll(); touchSync(); alert("📥 已从云端拉取最新事务。"); }
     else alert("暂无云端数据或拉取失败（可能网络问题）。");
   }catch(e){ alert("⚠️ 拉取出错："+e.message); }
   finally{ btn.textContent=old; btn.disabled=false; }
@@ -610,23 +619,24 @@ async function doPull(){
 /* ===== 自动同步：改动即推 + 定时轮询拉取 ===== */
 async function autoPush(){
   if(!autoSync) return;
-  if(!GH_TOKEN){ showSyncHint("⚠ 本设备尚未授权：你新增/修改的日程不会同步到其他设备。点「☁️ 同步到云端」粘贴 token 即可开启自动上传。"); return; }
+  if(!GH_TOKEN){ showSyncHint("⚠ 本设备尚未授权：你新增/修改/删除的日程不会同步到其他设备。点「☁️ 同步到云端」粘贴 token 即可开启自动上传。"); updateSyncStatus(); return; }
   _suppressPush=true;
   try{
     const cloud=await cloudPull();
     if(cloud){ tasks=mergeTasks(tasks,cloud); save(LS_TASK,tasks); }
-    await cloudPush(tasks);
+    const ok=await cloudPush(tasks);
+    if(ok) touchSync();
   }catch(e){ /* 静默失败，等下次重试 */ }
-  finally{ _suppressPush=false; }
+  finally{ _suppressPush=false; updateSyncStatus(); }
 }
 function showSyncHint(msg){ const h=document.getElementById("syncHint"); if(h){ h.textContent=msg; h.style.display="block"; } }
 function hideSyncHint(){ const h=document.getElementById("syncHint"); if(h) h.style.display="none"; }
-function scheduleAutoPush(){                   // 本地事务变更后防抖 3 秒自动上传
+function scheduleAutoPush(){                   // 本地事务变更后防抖 2 秒自动上传
   if(!autoSync) return;
   if(_pushTimer) clearTimeout(_pushTimer);
-  _pushTimer=setTimeout(autoPush, 3000);
+  _pushTimer=setTimeout(autoPush, 2000);
 }
-async function pollOnce(){                     // 每 60 秒静默拉取云端（无需 token）
+async function pollOnce(){                     // 每 30 秒静默拉取云端（无需 token）
   if(!autoSync) return;
   const cloud=await cloudPull();
   if(cloud){
@@ -635,8 +645,9 @@ async function pollOnce(){                     // 每 60 秒静默拉取云端�
     finally{ _suppressPush=false; }
     renderAll();
   }
+  touchSync();
 }
-function startPoll(){ if(_pollTimer) return; _pollTimer=setInterval(pollOnce, 60000); }
+function startPoll(){ if(_pollTimer) return; _pollTimer=setInterval(pollOnce, 30000); }
 function stopPoll(){ if(_pollTimer){ clearInterval(_pollTimer); _pollTimer=null; } }
 function setAutoSync(on){
   autoSync=!!on;
@@ -645,10 +656,35 @@ function setAutoSync(on){
   if(b){ b.textContent=autoSync?"🔄 自动同步：开":"🔄 自动同步：关"; b.classList.toggle("primary",autoSync); }
   if(autoSync){ startPoll(); if(!GH_TOKEN) showSyncHint("⚠ 本设备尚未授权：新增/修改的日程不会同步到其他设备。点「☁️ 同步到云端」粘贴 token 即可开启自动上传。"); }
   else { stopPoll(); hideSyncHint(); }
+  updateSyncStatus();
 }
 document.getElementById("btnAuto").onclick=()=>setAutoSync(!autoSync);
 document.getElementById("btnSync").onclick=doSync;
 document.getElementById("btnPull").onclick=doPull;
+
+/* ===== 同步状态显示 ===== */
+const APP_VER="2026-08-28c";
+let _lastSync=0;
+function fmtSync(ts){
+  if(!ts) return "尚未同步";
+  const s=Math.floor((Date.now()-ts)/1000);
+  if(s<60) return "刚刚";
+  if(s<3600) return Math.floor(s/60)+" 分钟前";
+  const d=new Date(ts);
+  return (d.getMonth()+1)+"/"+d.getDate()+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+}
+function updateSyncStatus(){
+  const el=document.getElementById("syncStatus"); if(!el) return;
+  const ok=!!GH_TOKEN && autoSync;
+  el.className="syncstatus "+(ok?"ok":"warn");
+  el.textContent=(ok?"✅ 已授权 · 自动同步：开":"⚠️ 未授权：本设备改动不会同步到其他端")+" · 上次同步："+fmtSync(_lastSync)+" · 版本 "+APP_VER;
+}
+function touchSync(){ _lastSync=Date.now(); updateSyncStatus(); }
+function flushPush(){                          // 页面切后台/关闭前立即推送未决改动（移动端关键）
+  if(_pushTimer){ clearTimeout(_pushTimer); _pushTimer=null; }
+  if(!autoSync || !GH_TOKEN) return;
+  autoPush();
+}
 
 /* 启动 */
 tryLoadFromHash();
@@ -659,13 +695,15 @@ tryLoadFromHash();
     if(cloud){ tasks=mergeTasks(tasks,cloud); save(LS_TASK,tasks); }
   } finally{ _suppressPush=false; }
   renderDow(); renderDetail(); renderAll();
-  setAutoSync(autoSync); // 初始化按钮状态并启动 60 秒轮询拉取
+  setAutoSync(autoSync); // 初始化按钮状态并启动轮询拉取
+  updateSyncStatus();
 })();
-/* 切回前台/解锁时立即拉取一次（叠加在轮询之上，体验更即时）*/
+/* 切回前台立即拉取；切后台立即推送（移动端从浏览器切走时确保改动已上传）*/
 document.addEventListener("visibilitychange", ()=>{
-  if(document.hidden) return;
-  cloudPull().then(cloud=>{ if(cloud){ tasks=mergeTasks(tasks,cloud); save(LS_TASK,tasks); renderAll(); } });
+  if(document.hidden){ flushPush(); return; }
+  cloudPull().then(cloud=>{ if(cloud){ _suppressPush=true; try{ tasks=mergeTasks(tasks,cloud); save(LS_TASK,tasks); }finally{ _suppressPush=false; } renderAll(); touchSync(); } });
 });
+window.addEventListener("pagehide", flushPush);
 </script>
 </body>
 </html>
