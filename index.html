@@ -42,6 +42,15 @@
   .startag{background:var(--accent);color:#fff;border-radius:4px;padding:0 4px;font-size:9px;font-weight:700;margin-left:3px;vertical-align:middle}
   .dnum{font-size:11.5px;color:var(--muted);font-weight:600}
   .cell.special .dnum{color:var(--danger)}
+  /* 日期号行：左为日号，右为事务小徽标（避免占用下午区与课程挤在一起）*/
+  .dnum-row{display:flex;align-items:center;justify-content:space-between;gap:4px;min-height:14px}
+  .dnum-row .dnum{flex:0 0 auto}
+  .tbadge{font-size:9px;line-height:1;border-radius:8px;padding:2px 5px;font-weight:700;
+    background:var(--accent2);color:var(--accent);white-space:nowrap;
+    display:inline-flex;align-items:center;gap:3px}
+  .tbadge.all-done{background:#e2efe5;color:#2c7a45}
+  .tbadge .dot{width:5px;height:5px;border-radius:50%;background:var(--accent);display:inline-block}
+  .tbadge.all-done .dot{background:#2c7a45}
   /* 上午/下午分区：上区=上午，下区=下午，中间虚线分隔 */
   .zone{flex:1 1 0;min-height:0;display:flex;flex-direction:column;gap:3px}
   .zone.eve{background:#fbf7f0;border-radius:7px;padding:3px 4px;margin-top:1px}
@@ -130,6 +139,8 @@
     .cell .chip .tc{display:none}
     .cell .chip .tag{display:none}
     .dow{font-size:clamp(10px,2.8vw,12px);padding:3px 0}
+    .tbadge{font-size:clamp(7.5px,2vw,8.5px);padding:1.5px 4px;gap:2px}
+    .tbadge .dot{width:4px;height:4px}
     .addrow input[name=t]{min-width:100%}
     .addrow{flex-direction:column}
     .addrow input,.addrow textarea,.addrow .btn{flex:1 1 auto;width:100%}
@@ -385,13 +396,13 @@ function renderCal(){
     const aft  = cs.filter(c=>c.period==="下午").map(chipHtml).join("");
     const eve  = cs.filter(c=>c.period==="晚上").map(chipHtml).join("");
     // 事务计数放在下午区底部（详细在下方每日日程中编辑）
-    const tcount = dayTasks.length?`<div class="chip task"><span class="bdg">事</span><span class="nm">${dayTasks.length} 项事务</span></div>`:"";
+    const tbadge = dayTasks.length?`<span class="tbadge${dayTasks.every(t=>t.done)?' all-done':''}"><span class="dot"></span>${dayTasks.length}</span>`:"";
     const eveBlock = eve?`<div class="mid"></div><div class="zone eve">${eve}</div>`:"";
     html+=`<div class="${cls}" data-iso="${iso}">
-      <div class="dnum">${d.getDate()}${isStart?' <span class="startag">开学</span>':''}</div>
+      <div class="dnum-row"><span class="dnum">${d.getDate()}${isStart?' <span class="startag">开学</span>':''}</span>${tbadge}</div>
       <div class="zone am">${morn}</div>
       <div class="mid"></div>
-      <div class="zone pm">${aft}${tcount}</div>${eveBlock}
+      <div class="zone pm">${aft}</div>${eveBlock}
     </div>`;
   }
   grid.innerHTML=html;
@@ -673,7 +684,7 @@ document.getElementById("btnSync").onclick=doSync;
 document.getElementById("btnPull").onclick=doPull;
 
 /* ===== 同步状态显示 ===== */
-const APP_VER="2026-08-28d";
+const APP_VER="2026-08-28e";
 let _lastSync=0;
 function fmtSync(ts){
   if(!ts) return "尚未同步";
