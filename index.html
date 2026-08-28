@@ -360,7 +360,7 @@ function renderCal(){
     const wd=d.getDay();
     const isAdj = !inMonth;
     const cs=coursesOnDate(iso);
-    const dayTasks=tasks.filter(t=>t.date===iso);
+    const dayTasks=tasks.filter(t=>t.date===iso && !t.del);
     const isSel = iso===selDate;
     const isSpecial = cs.some(c=>c.tag);
     const isStart = iso==="2026-08-31";
@@ -400,7 +400,7 @@ function renderDay(){
         <span class="tc">${c.teacher}</span></div>`;
     }).join("");
   } else { cc.innerHTML=`<div class="empty">当天无固定课程（可在下方添加事务）。</div>`; }
-  const list=tasks.filter(t=>t.date===selDate).sort((a,b)=>(a.time||"").localeCompare(b.time||""));
+  const list=tasks.filter(t=>t.date===selDate && !t.del).sort((a,b)=>(a.time||"").localeCompare(b.time||""));
   const tl=document.getElementById("dayTasks");
   if(!list.length){ tl.innerHTML=`<div class="empty">尚无事务。</div>`; return; }
   tl.innerHTML=list.map(t=>taskHTML(t)).join("");
@@ -423,7 +423,7 @@ function bindTaskEvents(){
     el.querySelector('[data-act=chk]').onchange=e=>{ const t=tasks.find(x=>x.id===id); t.done=e.target.checked; save(LS_TASK,tasks); renderTodo(); if(t.done) el.classList.add("done"); else el.classList.remove("done"); };
     el.querySelector('[data-act=title]').onblur=e=>{ const t=tasks.find(x=>x.id===id); t.title=e.target.innerText.trim(); save(LS_TASK,tasks); renderTodo(); };
     el.querySelector('[data-act=note]').onblur=e=>{ const t=tasks.find(x=>x.id===id); t.note=e.target.innerText.trim(); save(LS_TASK,tasks); };
-    el.querySelector('[data-act=del]').onclick=()=>{ tasks=tasks.filter(x=>x.id!==id); save(LS_TASK,tasks); renderDay(); renderTodo(); renderCal(); };
+    el.querySelector('[data-act=del]').onclick=()=>{ const t=tasks.find(x=>x.id===id); if(t){ t.del=true; t.ut=Date.now(); } save(LS_TASK,tasks); renderDay(); renderTodo(); renderCal(); };
   });
 }
 
@@ -431,7 +431,7 @@ function bindTaskEvents(){
 let filter="all";
 function renderTodo(){
   const el=document.getElementById("todoList");
-  let list=tasks.slice().sort((a,b)=> a.date.localeCompare(b.date)||(a.time||"").localeCompare(b.time||""));
+  let list=tasks.slice().filter(t=>!t.del).sort((a,b)=> a.date.localeCompare(b.date)||(a.time||"").localeCompare(b.time||""));
   if(filter==="open") list=list.filter(t=>!t.done);
   if(filter==="done") list=list.filter(t=>t.done);
   if(!list.length){ el.innerHTML=`<div class="empty">暂无待办。</div>`; return; }
@@ -448,7 +448,7 @@ function renderTodo(){
     </div>`;
   }).join("");
   el.querySelectorAll('input[type=checkbox]').forEach(c=>c.onchange=()=>{ const t=tasks.find(x=>x.id===c.dataset.id); t.done=c.checked; save(LS_TASK,tasks); renderTodo(); if(t.date===selDate) renderDay(); });
-  el.querySelectorAll('.del').forEach(b=>b.onclick=()=>{ tasks=tasks.filter(x=>x.id!==b.dataset.id); save(LS_TASK,tasks); renderTodo(); if(b.dataset.id && tasks.find(x=>x.id===b.dataset.id)===undefined){} renderDay(); renderCal(); });
+  el.querySelectorAll('.del').forEach(b=>b.onclick=()=>{ const t=tasks.find(x=>x.id===b.dataset.id); if(t){ t.del=true; t.ut=Date.now(); } save(LS_TASK,tasks); renderTodo(); renderDay(); renderCal(); });
 }
 
 /* ===== 课程时间明细（PDF 第2页）===== */
