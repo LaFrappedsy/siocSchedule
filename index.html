@@ -75,6 +75,8 @@
   .chip.lab .nm{color:#8a5200}
   .chip.lab .bdg{background:#f6e3bd;color:#8a5200}
   .chip.lab .tc{color:#a8761f;opacity:1}
+  /* 手机端专用短标签「实验」：桌面端隐藏（桌面格子宽，直接显示实验名） */
+  .chip.lab .sh{display:none}
   /* daily */
   .daybar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px}
   .daytitle{font-size:15px;font-weight:700}
@@ -156,13 +158,18 @@
       font-size:clamp(8.5px,2.3vw,10px);font-weight:700}
     .cell .chip .tc{display:none}
     .cell .chip .tag{display:none}
-    /* 实验安排：手机端格子窄，名称允许折行、教师信息交给「每日日程」区查看，避免被裁切 */
-    .cell .zone.lab{padding:2px 2px}
-    .cell .chip.lab{flex-wrap:wrap;row-gap:0;border-left-width:2px}
-    .cell .chip.lab .bdg{background:#f6e3bd;color:#8a5200}
-    .cell .chip.lab .nm{white-space:normal;overflow:visible;text-overflow:clip;
-      font-size:clamp(8px,2.2vw,9.5px);line-height:1.1;flex:1 1 auto}
+    /* 实验安排：手机端缩成「实验」两个字的小块 —— 不写实验名，格子不被撑高，不遮挡其它标识
+       （具体是哪门实验，点进下方「每日日程」看，或长按格子看提示） */
+    .cell .zone.lab{padding:1.5px 2px;margin-bottom:1px}
+    .cell .chip.lab{flex-wrap:nowrap;justify-content:center;border-left-width:2px;
+      padding:1.5px 3px;min-height:0}
+    .cell .chip.lab .bdg{display:none}
+    .cell .chip.lab .nm{display:none}
     .cell .chip.lab .tc{display:none}
+    .cell .chip.lab .sh{display:inline;font-size:clamp(8px,2.2vw,9.5px);font-weight:700;
+      line-height:1.25;color:#8a5200;letter-spacing:.06em}
+    /* 手机端各分区按内容自然撑高，避免内容多时相互挤压重叠 */
+    .cell .zone{flex:0 0 auto}
     .dow{font-size:clamp(10px,2.8vw,12px);padding:3px 0}
     .tbadge{font-size:clamp(7.5px,2vw,8.5px);padding:1.5px 4px;gap:2px}
     .tbadge .dot{width:4px;height:4px}
@@ -191,7 +198,7 @@
 </head>
 <body>
   <h1>2026–2027 学年第一学期 · 课程与每日日程</h1>
-  <p class="sub">含课程表 + <b>A 组实验课程安排</b>（2026-10-15 起 · 7 门实验 · 共 26 天，日历中以琥珀色「实验」区显示）<span class="ver">版本 2026-10-11b</span></p>
+  <p class="sub">含课程表 + <b>A 组实验课程安排</b>（2026-10-15 起 · 7 门实验 · 共 26 天，日历中以琥珀色「实验」区显示）<span class="ver">版本 2026-10-11c</span></p>
 
   <section>
     <div class="cal-head">
@@ -429,8 +436,10 @@ function chipHtml(c){
   // 实验安排走 .chip.lab 专用样式（不套用课程配色），一眼区分「上课」与「做实验」
   const isLab = c.period==="实验";
   const style = isLab ? "" : ` style="background:${c.color}"`;
+  // 实验：桌面端显示实验全名；手机端由 CSS 切换为只显示「实验」两字的小块
+  const sh = isLab ? `<span class="sh">实验</span>` : "";
   return `<div class="chip${isLab?" lab":""}"${style} title="${full}">
-    <div class="top"><span class="bdg">${ps}</span><span class="nm">${c.name}</span></div>
+    <div class="top"><span class="bdg">${ps}</span><span class="nm">${c.name}</span>${sh}</div>
     <span class="tc">${c.teacher}</span>${tag}</div>`;
 }
 function renderCal(){
@@ -458,14 +467,16 @@ function renderCal(){
     const eve  = cs.filter(c=>c.period==="晚上").map(chipHtml).join("");
     // 事务计数放在下午区底部（详细在下方每日日程中编辑）
     const tbadge = dayTasks.length?`<span class="tbadge${dayTasks.every(t=>t.done)?' all-done':''}"><span class="dot"></span>${dayTasks.length}</span>`:"";
-    const eveBlock = eve?`<div class="mid"></div><div class="zone eve">${eve}</div>`:"";
+    // 实验日为整天实验：格子内不再画上午/下午分隔虚线（eve 区自带底色，也无需另画线）
+    const midBlock = lab?"":'<div class="mid"></div>';
+    const eveBlock = eve?`${midBlock}<div class="zone eve">${eve}</div>`:"";
     // 实验安排置于格子最上方（占整天，独立琥珀色区块）
     const labBlock = lab?`<div class="zone lab">${lab}</div>`:"";
     html+=`<div class="${cls}" data-iso="${iso}">
       <div class="dnum-row"><span class="dnum">${d.getDate()}${isStart?' <span class="startag">开学</span>':''}</span>${tbadge}</div>
       ${labBlock}
       <div class="zone am">${morn}</div>
-      <div class="mid"></div>
+      ${midBlock}
       <div class="zone pm">${aft}</div>${eveBlock}
     </div>`;
   }
@@ -774,7 +785,7 @@ document.getElementById("btnSync").onclick=doSync;
 document.getElementById("btnPull").onclick=doPull;
 
 /* ===== 同步状态显示 ===== */
-const APP_VER="2026-10-11b";
+const APP_VER="2026-10-11c";
 let _lastSync=0;
 function fmtSync(ts){
   if(!ts) return "尚未同步";
