@@ -17,6 +17,8 @@
   h1{font-size:20px;margin:0 0 2px}
   h2{font-size:16px;margin:0 0 10px;display:flex;align-items:center;gap:8px}
   .sub{color:var(--muted);font-size:12.5px;margin:0 0 14px}
+  .ver{display:inline-block;margin-left:6px;font-size:11px;padding:1px 7px;border-radius:999px;
+    background:var(--accent2);color:var(--accent);font-weight:700;white-space:nowrap}
   section{background:var(--card);border:1px solid var(--line);border-radius:14px;
     padding:16px;margin-bottom:16px;box-shadow:var(--shadow)}
   /* calendar */
@@ -30,7 +32,7 @@
   .dow{text-align:center;font-size:12px;color:var(--muted);font-weight:600;padding:4px 0}
   .cell{min-height:108px;border:1px solid var(--line);border-radius:10px;padding:5px;
     background:#fff;cursor:pointer;display:flex;flex-direction:column;gap:2px;
-    transition:box-shadow .12s,border-color .12s;overflow:hidden}
+    transition:box-shadow .12s,border-color .12s;overflow:hidden;min-width:0}
   .cell:hover{border-color:var(--accent)}
   .cell.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent2)}
   /* 非本月：明显淡化 + 虚线边框，一眼区分 */
@@ -52,12 +54,12 @@
   .tbadge .dot{width:5px;height:5px;border-radius:50%;background:var(--accent);display:inline-block}
   .tbadge.all-done .dot{background:#2c7a45}
   /* 上午/下午分区：上区=上午，下区=下午，中间虚线分隔 */
-  .zone{flex:1 1 0;min-height:0;display:flex;flex-direction:column;gap:3px}
+  .zone{flex:1 1 0;min-height:0;min-width:0;display:flex;flex-direction:column;gap:3px}
   .zone.eve{background:#fbf7f0;border-radius:7px;padding:3px 4px;margin-top:1px}
   .mid{height:0;border-top:1px dashed #e6eaf0;margin:2px 0}
   .chip{border-radius:7px;padding:3px 5px;color:#2f2b28;font-size:11px;line-height:1.25;
-    display:flex;flex-direction:column;gap:1px}
-  .chip .top{display:flex;align-items:center;gap:4px}
+    display:flex;flex-direction:column;gap:1px;min-width:0;overflow:hidden}
+  .chip .top{display:flex;align-items:center;gap:4px;min-width:0}
   .chip .bdg{background:rgba(0,0,0,.13);border-radius:4px;padding:0 4px;
     font-size:9.5px;font-weight:700;line-height:1.4;color:#2f2b28}
   .chip .nm{font-weight:700;font-size:11px}
@@ -67,6 +69,12 @@
   .chip.task{background:#eef1f6;color:#3a4756;border:1px dashed #c3ccd9}
   .chip.task .nm{color:#3a4756}
   .chip.task .bdg{background:#dde3ee;color:#3a4756}
+  /* 实验安排（A组）：与「课程」区分——米白底 + 琥珀左边框，一眼看出是「做实验」不是「上课」 */
+  .zone.lab{background:#fdf6e7;border-radius:7px;padding:3px 4px;margin-bottom:2px;flex:0 0 auto}
+  .chip.lab{background:#fffdf6;border:1px solid #eacb91;border-left:3px solid #d9880e;color:#8a5200}
+  .chip.lab .nm{color:#8a5200}
+  .chip.lab .bdg{background:#f6e3bd;color:#8a5200}
+  .chip.lab .tc{color:#a8761f;opacity:1}
   /* daily */
   .daybar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px}
   .daytitle{font-size:15px;font-weight:700}
@@ -114,6 +122,16 @@
   table.det th{background:#f7f9fc;font-weight:700}
   table.det .c{font-weight:700}
   .swcell{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:middle}
+  /* A组实验安排总览卡片 */
+  .lab-card{border:1px solid var(--line);border-left:4px solid #d9880e;border-radius:10px;
+    padding:8px 10px;margin-bottom:6px;background:#fffdf7}
+  .lab-card .h{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .lab-card .nm{font-weight:700}
+  .lab-card .bdg{font-size:11px;background:#f6e3bd;color:#8a5200;border-radius:6px;padding:1px 7px;font-weight:700}
+  .lab-card .tc{color:var(--muted);font-size:12.5px}
+  .lab-card .cnt{font-size:11.5px;color:var(--muted);margin-left:auto;white-space:nowrap}
+  .lab-card .ds{font-size:12.5px;color:#8a5200;margin-top:5px;line-height:1.65;word-break:break-word}
+  .lab-card .ds small{color:var(--muted);font-size:11px}
   .note{font-size:12px;color:var(--muted);margin-top:8px}
   /* 响应式：整页随屏幕自适应（手机/平板） */
   /* 月历使用 1fr 等列，天然铺满宽度、适配任意屏幕，无需横向滚动 */
@@ -138,6 +156,13 @@
       font-size:clamp(8.5px,2.3vw,10px);font-weight:700}
     .cell .chip .tc{display:none}
     .cell .chip .tag{display:none}
+    /* 实验安排：手机端格子窄，名称允许折行、教师信息交给「每日日程」区查看，避免被裁切 */
+    .cell .zone.lab{padding:2px 2px}
+    .cell .chip.lab{flex-wrap:wrap;row-gap:0;border-left-width:2px}
+    .cell .chip.lab .bdg{background:#f6e3bd;color:#8a5200}
+    .cell .chip.lab .nm{white-space:normal;overflow:visible;text-overflow:clip;
+      font-size:clamp(8px,2.2vw,9.5px);line-height:1.1;flex:1 1 auto}
+    .cell .chip.lab .tc{display:none}
     .dow{font-size:clamp(10px,2.8vw,12px);padding:3px 0}
     .tbadge{font-size:clamp(7.5px,2vw,8.5px);padding:1.5px 4px;gap:2px}
     .tbadge .dot{width:4px;height:4px}
@@ -166,6 +191,7 @@
 </head>
 <body>
   <h1>2026–2027 学年第一学期 · 课程与每日日程</h1>
+  <p class="sub">含课程表 + <b>A 组实验课程安排</b>（2026-10-15 起 · 7 门实验 · 共 26 天，日历中以琥珀色「实验」区显示）<span class="ver">版本 2026-10-11b</span></p>
 
   <section>
     <div class="cal-head">
@@ -204,6 +230,12 @@
       <button data-f="done">已完成</button>
     </div>
     <div id="todoList"></div>
+  </section>
+
+  <section>
+    <h2>🧪 A 组实验安排</h2>
+    <p class="note" style="margin-top:0">来源：《2026–2027 年度实验课程时间安排》（A 组）。实验日固定为<b>周四 / 周五 / 周六</b>，共 7 门实验、26 天；已同步标注在上方月历中。</p>
+    <div id="labList"></div>
   </section>
 
   <section>
@@ -281,6 +313,29 @@ const SPECIAL = [
   {date:"2027-01-21", period:"晚上", key:"大组会", t:"陈组 18:00", tag:""}
 ];
 
+/* ===== A 组实验课程安排（依据《2026–2027 年度实验课程时间安排》）=====
+   实验日固定为周四 / 周五 / 周六；A 组共 7 门实验、26 天。
+   字段：n=实验内容  r=负责老师  g=指导老师  d=上课日期 */
+const LAB_GROUP = "A";
+const LAB_COLOR = "#d9880e";   // 琥珀色（实验区专用色，与课程配色区分）
+const LABS = [
+  {n:"睾丸素合成",        r:"马大为", g:"赵祥波", d:["2026-10-15","2026-10-16","2026-10-17","2026-10-22"]},
+  {n:"偶联反应",          r:"刘国生", g:"陈品红", d:["2026-11-05","2026-11-06","2026-11-07"]},
+  {n:"高分子合成",        r:"黄晓宇", g:"张森",   d:["2026-11-19","2026-11-20","2026-11-21"]},
+  {n:"Diels-Alder反应",   r:"汤文军", g:"徐广庆", d:["2026-12-03","2026-12-04","2026-12-05"]},
+  {n:"光化学反应",        r:"左智伟", g:"赵祥波", d:["2026-12-17","2026-12-18","2026-12-19","2026-12-24"]},
+  {n:"不对称环氧化反应",  r:"赵刚",   g:"",       d:["2027-03-04","2027-03-05","2027-03-06","2027-03-11","2027-03-12","2027-03-13"]},
+  {n:"电化学反应",        r:"梅天胜", g:"",       d:["2027-04-01","2027-04-02","2027-04-03"]}
+];
+/* 日期 → 实验 的快速索引 */
+const LAB_MAP = (()=>{
+  const m={};
+  LABS.forEach(L=>L.d.forEach(iso=>{
+    m[iso]={name:L.n, t:L.r+(L.g?"（指导："+L.g+"）":""), group:LAB_GROUP};
+  }));
+  return m;
+})();
+
 /* 课程固定配色（低饱和、同色系高级感；现代文献检索仅集中上课）*/
 const COLOR = {
   "有机合成":"#aebfd0",
@@ -352,6 +407,8 @@ function coursesOnDate(iso){
   SPECIAL.forEach(sp=>{
     if(sp.date===iso) out.push({key:sp.key,color:COLOR[sp.key],period:sp.period,name:sp.key,teacher:sp.t,tag:sp.tag||""});
   });
+  const L=LAB_MAP[iso];
+  if(L) out.push({key:L.name,color:LAB_COLOR,period:"实验",name:L.name,teacher:L.t,tag:""});
   return out;
 }
 
@@ -362,14 +419,17 @@ function renderDow(){
   document.getElementById("dowRow").innerHTML = DOW.map(d=>`<div class="dow">${d}</div>`).join("");
 }
 function chipHtml(c){
-  // 短时段标：上午/下午/晚上 → 上/下/晚（手机端省空间，电脑端自动忽略）
-  const pShort = {上午:"上",下午:"下",晚上:"晚"};
+  // 短时段标：上午/下午/晚上/实验 → 上/下/晚/实（手机端省空间，电脑端自动忽略）
+  const pShort = {上午:"上",下午:"下",晚上:"晚",实验:"实"};
   const ps = pShort[c.period] || c.period;
   const abbr = ABBR[c.name]||c.name;
   // 完整名（鼠标悬停/手机长按显示含教师信息）
   const full = c.teacher ? `${c.name} · ${c.teacher}` : c.name;
   const tag = c.tag?`<span class="tag">${c.tag}</span>`:"";
-  return `<div class="chip" style="background:${c.color}" title="${full}">
+  // 实验安排走 .chip.lab 专用样式（不套用课程配色），一眼区分「上课」与「做实验」
+  const isLab = c.period==="实验";
+  const style = isLab ? "" : ` style="background:${c.color}"`;
+  return `<div class="chip${isLab?" lab":""}"${style} title="${full}">
     <div class="top"><span class="bdg">${ps}</span><span class="nm">${c.name}</span></div>
     <span class="tc">${c.teacher}</span>${tag}</div>`;
 }
@@ -392,14 +452,18 @@ function renderCal(){
     const isSpecial = cs.some(c=>c.tag);
     const isStart = iso==="2026-08-31";
     let cls="cell"+(isAdj?" adj":"")+(isSel?" sel":"")+(isSpecial?" special":"")+(isStart?" start":"");
+    const lab  = cs.filter(c=>c.period==="实验").map(chipHtml).join("");
     const morn = cs.filter(c=>c.period==="上午").map(chipHtml).join("");
     const aft  = cs.filter(c=>c.period==="下午").map(chipHtml).join("");
     const eve  = cs.filter(c=>c.period==="晚上").map(chipHtml).join("");
     // 事务计数放在下午区底部（详细在下方每日日程中编辑）
     const tbadge = dayTasks.length?`<span class="tbadge${dayTasks.every(t=>t.done)?' all-done':''}"><span class="dot"></span>${dayTasks.length}</span>`:"";
     const eveBlock = eve?`<div class="mid"></div><div class="zone eve">${eve}</div>`:"";
+    // 实验安排置于格子最上方（占整天，独立琥珀色区块）
+    const labBlock = lab?`<div class="zone lab">${lab}</div>`:"";
     html+=`<div class="${cls}" data-iso="${iso}">
       <div class="dnum-row"><span class="dnum">${d.getDate()}${isStart?' <span class="startag">开学</span>':''}</span>${tbadge}</div>
+      ${labBlock}
       <div class="zone am">${morn}</div>
       <div class="mid"></div>
       <div class="zone pm">${aft}</div>${eveBlock}
@@ -418,11 +482,17 @@ function renderDay(){
   const cs=coursesOnDate(selDate);
   const cc=document.getElementById("dayCourses");
   if(cs.length){
+    // 实验安排排在课程之前，并用琥珀色标记
+    cs.sort((a,b)=>(b.period==="实验"?1:0)-(a.period==="实验"?1:0));
     cc.innerHTML = cs.map(c=>{
       const tag=c.tag?` <span style="color:var(--danger);font-weight:700">(${c.tag})</span>`:"";
-      return `<div class="course-card">
+      const isLab=c.period==="实验";
+      const pb=isLab?`${LAB_GROUP}组实验`:c.period;
+      const bs=isLab?` style="background:#f6e3bd;color:#8a5200"`:"";
+      const cs_=isLab?` style="border-left:4px solid ${LAB_COLOR}"`:"";
+      return `<div class="course-card"${cs_}>
         <span class="dot" style="background:${c.color}"></span>
-        <span class="bdg">${c.period}</span>
+        <span class="bdg"${bs}>${pb}</span>
         <span class="nm">${c.name}</span>${tag}
         <span class="tc">${c.teacher}</span></div>`;
     }).join("");
@@ -478,6 +548,26 @@ function renderTodo(){
   el.querySelectorAll('.del').forEach(b=>b.onclick=()=>{ const t=tasks.find(x=>x.id===b.dataset.id); if(t){ t.del=true; t.ut=Date.now(); } save(LS_TASK,tasks); renderTodo(); renderDay(); renderCal(); });
 }
 
+/* ===== 渲染：A组实验安排总览 ===== */
+function renderLab(){
+  const el=document.getElementById("labList"); if(!el) return;
+  el.innerHTML = LABS.map(L=>{
+    const ds=L.d.map(iso=>{
+      const d=new Date(iso+"T00:00:00");
+      return `${d.getMonth()+1}/${d.getDate()}<small>(${cnWeek(iso)[1]})</small>`;
+    }).join("、");
+    return `<div class="lab-card">
+      <div class="h">
+        <span class="bdg">${LAB_GROUP} 组</span>
+        <span class="nm">${L.n}</span>
+        <span class="tc">负责老师：${L.r}${L.g?" · 指导老师："+L.g:""}</span>
+        <span class="cnt">共 ${L.d.length} 天</span>
+      </div>
+      <div class="ds">📅 ${ds}</div>
+    </div>`;
+  }).join("");
+}
+
 /* ===== 课程时间明细（PDF 第2页）===== */
 function renderDetail(){
   const rows=[
@@ -498,13 +588,13 @@ function renderDetail(){
   ];
   let html=`<table class="det"><tr><th>课程</th><th>教师</th><th>次数</th><th>时间</th><th>授课日期</th><th>备注/考试</th></tr>`;
   rows.forEach(r=>{ html+=`<tr><td class="c"><span class="swcell" style="background:${COLOR[r[0]]||'#999'}"></span>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td><td>${r[5]}</td></tr>`; });
-  html+=`</table><p class="note">说明：① 周四专硕课（有机合成精细化工基础、应用物理有机化学）、硕士英语（已免修）、周五/周六基础实验 均未列入本表。② 国庆假期 10/1–10/7，10/5（周一） likely 停课，硕士政治按连续16周显示至 12.14。③ 9/20 为周日、10/8 为国庆调休周四，这两天有补课，日历中以红框标注。④ <b>大组会（陈组）</b>逢 9/3、9/17、10/8、10/22、11/12、11/26、12/10、12/24、2027/1/7、2027/1/21 的<b>晚上 18:00</b>，已作为固定日程直接显示在日历的「晚上」区，颜色为柔雾紫灰（#b3a0b8）。</p>`;
+  html+=`</table><p class="note">说明：① 周四专硕课（有机合成精细化工基础、应用物理有机化学）、硕士英语（已免修）未列入本表。② 国庆假期 10/1–10/7，10/5（周一） likely 停课，硕士政治按连续16周显示至 12.14。③ 9/20 为周日、10/8 为国庆调休周四，这两天有补课，日历中以红框标注。④ <b>大组会（陈组）</b>逢 9/3、9/17、10/8、10/22、11/12、11/26、12/10、12/24、2027/1/7、2027/1/21 的<b>晚上 18:00</b>，已作为固定日程直接显示在日历的「晚上」区，颜色为柔雾紫灰（#b3a0b8）。⑤ <b>A 组实验课程</b>（周四/周五/周六）已依据《2026–2027 年度实验课程时间安排》单独录入，日历中以琥珀色「实验」区显示，并在「🧪 A 组实验安排」一栏汇总。</p>`;
   document.getElementById("detail").innerHTML=html;
 }
 
 /* ===== 通用 ===== */
 function esc(s){ return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
-function renderAll(){ renderCal(); renderDay(); renderTodo(); }
+function renderAll(){ renderCal(); renderDay(); renderTodo(); renderLab(); }
 
 /* 初始化视图到当前月份（联网版：打开即显示当下月份） */
 const _t0=new Date();
@@ -684,7 +774,7 @@ document.getElementById("btnSync").onclick=doSync;
 document.getElementById("btnPull").onclick=doPull;
 
 /* ===== 同步状态显示 ===== */
-const APP_VER="2026-08-28e";
+const APP_VER="2026-10-11b";
 let _lastSync=0;
 function fmtSync(ts){
   if(!ts) return "尚未同步";
