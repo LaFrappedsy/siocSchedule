@@ -198,7 +198,7 @@
 </head>
 <body>
   <h1>2026–2027 学年第一学期 · 课程与每日日程</h1>
-  <p class="sub">含课程表 + <b>A 组实验课程安排</b>（2026-10-15 起 · 7 门实验 · 共 26 天，日历中以琥珀色「实验」区显示）<span class="ver">版本 2026-11-10a</span></p>
+  <p class="sub">含课程表 + <b>A 组实验课程安排</b>（2026-10-15 起 · 7 门实验 · 共 26 天，日历中以琥珀色「实验」区显示）<span class="ver">版本 2026-11-10b</span></p>
 
   <section>
     <div class="cal-head">
@@ -277,7 +277,7 @@ const COURSES = [
     {t:"桂敬汉", s:"2026-11-23", e:"2027-01-11"}
   ]},
   {key:"硕士政治", name:"硕士政治", color:"#b6cda4", period:"下午", wd:1, segs:[
-    {t:"王昊阳、乔博、潘李锋", s:"2026-08-31", e:"2027-01-04"}
+    {t:"", s:"2026-08-31", e:"2027-01-04"}
   ]},
   {key:"物理有机化学", name:"物理有机化学", color:"#e0d2a8", period:"上午", wd:2, segs:[
     {t:"黎占亭(上)", s:"2026-09-01", e:"2026-09-29"},   // 共 7 次：10.6 在国庆假期内停课
@@ -428,6 +428,8 @@ const DOW=["周一","周二","周三","周四","周五","周六","周日"];
 function renderDow(){
   document.getElementById("dowRow").innerHTML = DOW.map(d=>`<div class="dow">${d}</div>`).join("");
 }
+/* 教师为空时不渲染 .tc，避免留下空标签占位 */
+function tcHtml(t){ return t ? `<span class="tc">${t}</span>` : ""; }
 function chipHtml(c){
   // 短时段标：上午/下午/晚上/实验 → 上/下/晚/实（手机端省空间，电脑端自动忽略）
   const pShort = {上午:"上",下午:"下",晚上:"晚",实验:"实"};
@@ -443,7 +445,7 @@ function chipHtml(c){
   const sh = isLab ? `<span class="sh">实验</span>` : "";
   return `<div class="chip${isLab?" lab":""}"${style} title="${full}">
     <div class="top"><span class="bdg">${ps}</span><span class="nm">${c.name}</span>${sh}</div>
-    <span class="tc">${c.teacher}</span>${tag}</div>`;
+    ${tcHtml(c.teacher)}${tag}</div>`;
 }
 function renderCal(){
   const grid=document.getElementById("calGrid");
@@ -511,7 +513,7 @@ function renderDay(){
         <span class="dot" style="background:${c.color}"></span>
         <span class="bdg"${bs}>${pb}</span>
         <span class="nm">${c.name}</span>${tag}
-        <span class="tc">${c.teacher}</span></div>`;
+        ${tcHtml(c.teacher)}</div>`;
     }).join("");
   } else { cc.innerHTML=`<div class="empty">当天无固定课程（可在下方添加事务）。</div>`; }
   const list=tasks.filter(t=>t.date===selDate && !t.del).sort((a,b)=>(a.time||"").localeCompare(b.time||""));
@@ -591,7 +593,7 @@ function renderDetail(){
     ["有机合成","沈其龙","5","周一上午","8.31–9.28","预计2026年12月初考试"],
     ["有机合成","桂敬汉","6","周一上午","10.12–11.16",""],
     ["合成设计","桂敬汉","8","周一上午","11.23–27.1.11","待定"],
-    ["硕士政治","王昊阳、乔博、潘李锋","19","周一下午","8.31–11.2，11.9 起再 9 次至 2027.1.4","11.9 起共 9 次（研究生部通知）"],
+    ["硕士政治","","19","周一下午","8.31–11.2，11.9 起再 9 次至 2027.1.4","11.9 起共 9 次（研究生部通知）"],
     ["物理有机化学（上）","黎占亭","7","周二上午","9.1–9.29、10.13–10.20（10.6 国庆停课）","预计2026年12月中旬考试"],
     ["物理有机化学（上）","薛小松","3","周二上午","10.27–11.10",""],
     ["物理有机化学（上）","郑超","4","周二上午","11.17–12.8",""],
@@ -791,7 +793,7 @@ document.getElementById("btnSync").onclick=doSync;
 document.getElementById("btnPull").onclick=doPull;
 
 /* ===== 同步状态显示 ===== */
-const APP_VER="2026-11-10a";
+const APP_VER="2026-11-10b";
 let _lastSync=0;
 function fmtSync(ts){
   if(!ts) return "尚未同步";
